@@ -4,8 +4,15 @@ import time
 import subprocess
 import pty
 import threading
+import pwd
 import tweepy
 from keys import *
+import html
+
+
+def html_to_unicode(escaped):
+    return html.unescape(escaped)
+
 
 auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
 auth.set_access_token(access_token, access_token_secret)
@@ -50,7 +57,7 @@ E.g: on_connect, on_disconnect, on_status, on_direct_message, etc."""
         print("Connection to twitter established!!")
         self.me = api.me()
         try:
-            api.update_status('Chat bot online!')
+            api.update_status('TwitBash online!')
             pass
         except tweepy.error.TweepError as e:
             print("Error sending bot online tweet.")
@@ -59,7 +66,7 @@ E.g: on_connect, on_disconnect, on_status, on_direct_message, etc."""
     def on_disconnect(self, notice):
         print("Connection to twitter lost!! : ", notice)
         try:
-            api.update_status('Chat bot bot now offline.')
+            api.update_status('TwitBash now offline.')
         except tweepy.error.TweepError as e:
             print("Error sending bot offline tweet.")
             print("Message: %s" % e)
@@ -82,10 +89,26 @@ E.g: on_connect, on_disconnect, on_status, on_direct_message, etc."""
                 print(status.direct_message['sender_screen_name'] + ": \"" + status.direct_message['text'] + "\"")
                 if sessions.get(status.direct_message['sender_id'], False):
                     os.write(sessions[status.direct_message["sender_id"]]["fd"],
-                             (status.direct_message['text'] + '\n').encode())
+                             (html_to_unicode(status.direct_message['text']) + '\n').encode())
                 else:
+                    api.send_direct_message(user_id=status.direct_message['sender_id'],
+                                            text="Welcome %s to TwitBash, checking user state..." %
+                                            status.direct_message['sender']['name'])
+
+                    try:
+                        pwd.getpwnam('twitbash-' + status.direct_message['sender_screen_name'])
+                    except KeyError:
+                        api.send_direct_message(user_id=status.direct_message['sender_id'],
+                                                text="User does net exist. Setting up...")
+                        subprocess.call(['useradd', 'twitbash-' + status.direct_message['sender_screen_name'],
+                                         '-G', 'twitbash', '-m', '-k', '/etc/twitbash-skel'])
+                        subprocess.call(['chmod', '700', '/home/twitbash-' + status.direct_message['sender_screen_name']])
+                    api.send_direct_message(user_id=status.direct_message['sender_id'],
+                                            text="Launching shell!")
                     master_fd, slave_fd = pty.openpty()
-                    process = subprocess.Popen(["/bin/bash", "--login"], stdin=slave_fd, stdout=slave_fd,
+                    os.chdir("/home/twitbash-" + status.direct_message['sender_screen_name'])
+                    process = subprocess.Popen(["su", "twitbash-" + status.direct_message['sender_screen_name']],
+                                               stdin=slave_fd, stdout=slave_fd,
                                                stderr=subprocess.STDOUT, close_fds=True)
                     os.close(slave_fd)
                     thread = threading.Thread(target=check_process, args=(status.direct_message['sender_id'],),
@@ -105,7 +128,7 @@ E.g: on_connect, on_disconnect, on_status, on_direct_message, etc."""
     def on_error(self, status):
         print(status)
         try:
-            api.update_status('Chat bot encountered an error... Now offline.')
+            api.update_status('TwitBash encountered an error... Now offline.')
         except tweepy.error.TweepError as e:
             print("Error sending bot offline-error tweet.")
             print("Message: %s" % e)
@@ -120,7 +143,7 @@ def main():
 
     except (KeyboardInterrupt, SystemExit):
         print("Shutting down the twitter chatbot...")
-        api.update_status('Chat bot bot now offline.')
+        api.update_status('TwitBash now offline.')
         print('goodbye!')
 
 
