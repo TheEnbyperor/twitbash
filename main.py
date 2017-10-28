@@ -57,7 +57,7 @@ E.g: on_connect, on_disconnect, on_status, on_direct_message, etc."""
         print("Connection to twitter established!!")
         self.me = api.me()
         try:
-            api.update_status('TwitBash online!')
+            api.update_status(str(time.time()) + ': TwitBash online!')
             pass
         except tweepy.error.TweepError as e:
             print("Error sending bot online tweet.")
@@ -66,7 +66,7 @@ E.g: on_connect, on_disconnect, on_status, on_direct_message, etc."""
     def on_disconnect(self, notice):
         print("Connection to twitter lost!! : ", notice)
         try:
-            api.update_status('TwitBash now offline.')
+            api.update_status(str(time.time()) + ': TwitBash now offline.')
         except tweepy.error.TweepError as e:
             print("Error sending bot offline tweet.")
             print("Message: %s" % e)
@@ -128,7 +128,7 @@ E.g: on_connect, on_disconnect, on_status, on_direct_message, etc."""
     def on_error(self, status):
         print(status)
         try:
-            api.update_status('TwitBash encountered an error... Now offline.')
+            api.update_status(str(time.time()) + ': TwitBash encountered an error... Now offline.')
         except tweepy.error.TweepError as e:
             print("Error sending bot offline-error tweet.")
             print("Message: %s" % e)
@@ -143,7 +143,7 @@ def main():
 
     except (KeyboardInterrupt, SystemExit):
         print("Shutting down the twitter chatbot...")
-        api.update_status('TwitBash now offline.')
+        api.update_status(str(time.time()) + ': TwitBash now offline.')
         print('goodbye!')
 
 
