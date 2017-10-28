@@ -5,13 +5,14 @@ import subprocess
 import pty
 import threading
 import pwd
+import sys
+import re
 import tweepy
 from keys import *
 import html
 
 
-def html_to_unicode(escaped):
-    return html.unescape(escaped)
+def html_to_unicode(e): return html.unescape(e)
 
 
 auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
@@ -36,6 +37,7 @@ def check_process(uid):
             else:
                 if not line:  # EOF
                     break
+                sys.stdout.write(line)
                 api.send_direct_message(user_id=uid, text=line)
     finally:
         os.close(session["fd"])
@@ -88,12 +90,14 @@ E.g: on_connect, on_disconnect, on_status, on_direct_message, etc."""
             if status.direct_message['sender_id'] != self.me.id:
                 print(status.direct_message['sender_screen_name'] + ": \"" + status.direct_message['text'] + "\"")
                 if sessions.get(status.direct_message['sender_id'], False):
+                    text = html_to_unicode(status.direct_message['text'])
+                    text = re.sub(r"\^Ctrl\+([A-z])", lambda m: chr(ord(m.group(1))-64), text)
                     os.write(sessions[status.direct_message["sender_id"]]["fd"],
                              (html_to_unicode(status.direct_message['text']) + '\n').encode())
                 else:
                     api.send_direct_message(user_id=status.direct_message['sender_id'],
                                             text="Welcome %s to TwitBash, checking user state..." %
-                                            status.direct_message['sender']['name'])
+                                                 status.direct_message['sender']['name'])
 
                     try:
                         pwd.getpwnam('twitbash-' + status.direct_message['sender_screen_name'])
@@ -102,7 +106,7 @@ E.g: on_connect, on_disconnect, on_status, on_direct_message, etc."""
                                                 text="User does net exist. Setting up...")
                         subprocess.call(['useradd', 'twitbash-' + status.direct_message['sender_screen_name'],
                                          '-G', 'twitbash', '-m', '-k', '/etc/twitbash-skel'])
-                        subprocess.call(['chmod', '700', '/home/twitbash-' + status.direct_message['sender_screen_name']])
+                        os.chmod('/home/twitbash-' + status.direct_message['sender_screen_name'], 700)
                     api.send_direct_message(user_id=status.direct_message['sender_id'],
                                             text="Launching shell!")
                     master_fd, slave_fd = pty.openpty()
