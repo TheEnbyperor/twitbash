@@ -91,9 +91,9 @@ E.g: on_connect, on_disconnect, on_status, on_direct_message, etc."""
                 print(status.direct_message['sender_screen_name'] + ": \"" + status.direct_message['text'] + "\"")
                 if sessions.get(status.direct_message['sender_id'], False):
                     text = html_to_unicode(status.direct_message['text'])
-                    text = re.sub(r"\^Ctrl\+([A-z])", lambda m: chr(ord(m.group(1))-64), text)
+                    text = re.sub(r"\^Ctrl\+([A-Z])", lambda m: chr(ord(m.group(1))-64), text)
                     os.write(sessions[status.direct_message["sender_id"]]["fd"],
-                             (html_to_unicode(status.direct_message['text']) + '\n').encode())
+                             (text + '\n').encode())
                 else:
                     api.send_direct_message(user_id=status.direct_message['sender_id'],
                                             text="Welcome %s to TwitBash, checking user state..." %
