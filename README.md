@@ -9,3 +9,5 @@ consumer_secret = 'enter_key'
 access_token = 'enter_key'
 access_token_secret = 'enter_key'
 ```
+
+Control characters can be sent like so: ^Ctrl+\[key code\] \(C, V, X, etc\)
